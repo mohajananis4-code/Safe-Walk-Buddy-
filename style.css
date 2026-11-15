@@ -331,6 +331,89 @@ footer {
   display: none !important;
 }
 
+/* ===== AI call screen (full-screen overlay) ===== */
+.call-screen {
+  position: fixed;
+  inset: 0;
+  background: rgba(23, 35, 59, 0.92);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 1000;
+}
+
+.call-box {
+  background: white;
+  border-radius: 24px;
+  padding: 32px 26px;
+  width: 100%;
+  max-width: 380px;
+  text-align: center;
+}
+
+.call-box h2 {
+  font: 800 22px Manrope;
+  margin: 10px 0 6px;
+}
+
+.call-icon {
+  font-size: 48px;
+  width: 92px;
+  height: 92px;
+  line-height: 92px;
+  margin: 0 auto;
+  border-radius: 50%;
+  background: var(--blue2);
+  animation: ring 1s infinite;
+}
+
+@keyframes ring {
+  0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 #3459e655; }
+  50% { transform: scale(1.06); box-shadow: 0 0 0 16px #3459e600; }
+}
+
+.call-box .button-row {
+  flex-direction: column;
+}
+
+.call-box .danger-btn {
+  margin-top: 10px;
+}
+
+/* ===== Alert status card ===== */
+.alert-card {
+  border-left: 4px solid var(--red);
+  background: #fff5f6;
+  color: #7a2b36;
+}
+
+.alert-card.safe {
+  border-left-color: var(--green);
+  background: #f0faf5;
+  color: #1d6b4a;
+}
+
+.alert-card a {
+  color: var(--blue);
+  font-weight: 700;
+}
+
+.demo-tag {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  background: #fff0f1;
+  color: var(--red);
+  padding: 3px 8px;
+  border-radius: 20px;
+  margin-left: 6px;
+}
+
+#alertPanel {
+  margin-top: 18px;
+}
+
 @media (max-width: 760px) {
   .container {
     margin: 18px auto;
