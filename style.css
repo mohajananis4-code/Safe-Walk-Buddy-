@@ -1,0 +1,268 @@
+/* ==============================
+   SAFE WALK BUDDY - MAIN DESIGN
+============================== */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: 'Segoe UI', Arial, sans-serif;
+}
+
+body {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #080d1c, #111c35, #0b1020);
+  color: #ffffff;
+  line-height: 1.6;
+}
+
+/* HEADER */
+
+header {
+  background: rgba(21, 29, 53, 0.95);
+  padding: 25px 15px;
+  text-align: center;
+  border-bottom: 1px solid #263957;
+  box-shadow: 0 5px 25px rgba(0, 0, 0, 0.3);
+}
+
+header h1 {
+  color: #55e6c1;
+  font-size: 30px;
+  font-weight: 800;
+  letter-spacing: 1px;
+}
+
+header p {
+  color: #aab7d0;
+  margin-top: 5px;
+  font-size: 14px;
+}
+
+/* MAIN CONTAINER */
+
+.container {
+  width: 90%;
+  max-width: 620px;
+  margin: 35px auto;
+}
+
+/* CARDS */
+
+.card {
+  background: rgba(21, 29, 53, 0.95);
+  padding: 25px;
+  border-radius: 16px;
+  margin-bottom: 22px;
+  border: 1px solid #293b5c;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  transition: transform 0.25s ease, border-color 0.25s ease;
+}
+
+.card:hover {
+  border-color: #55e6c1;
+  transform: translateY(-2px);
+}
+
+/* HEADINGS */
+
+h2 {
+  color: #55e6c1;
+  font-size: 22px;
+  margin-bottom: 15px;
+  font-weight: 700;
+}
+
+p {
+  color: #c4cde0;
+  margin-bottom: 12px;
+}
+
+/* LABELS */
+
+label {
+  display: block;
+  color: #c4cde0;
+  margin-top: 10px;
+  font-size: 14px;
+}
+
+/* INPUTS AND SELECT */
+
+input,
+select {
+  display: block;
+  width: 100%;
+  padding: 14px;
+  margin: 9px 0 17px;
+  border: 1px solid #394969;
+  border-radius: 9px;
+  background: #0b1020;
+  color: #ffffff;
+  font-size: 15px;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+input::placeholder {
+  color: #8492ad;
+}
+
+input:focus,
+select:focus {
+  border-color: #55e6c1;
+  box-shadow: 0 0 0 3px rgba(85, 230, 193, 0.12);
+}
+
+select {
+  cursor: pointer;
+}
+
+/* BUTTONS */
+
+button {
+  display: block;
+  width: 100%;
+  padding: 14px;
+  margin-top: 12px;
+  border: none;
+  border-radius: 9px;
+  background: linear-gradient(135deg, #55e6c1, #37cba8);
+  color: #07131a;
+  font-size: 15px;
+  font-weight: 750;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 7px 20px rgba(85, 230, 193, 0.2);
+}
+
+button:active {
+  transform: scale(0.98);
+}
+
+/* BUTTON VARIATIONS */
+
+.danger {
+  background: linear-gradient(135deg, #ff5263, #e63850);
+  color: #ffffff;
+}
+
+.secondary {
+  background: #34415f;
+  color: #ffffff;
+}
+
+.danger:hover {
+  box-shadow: 0 7px 20px rgba(255, 82, 99, 0.2);
+}
+
+/* STATUS */
+
+.status {
+  padding: 14px;
+  background: #263653;
+  border-left: 4px solid #55e6c1;
+  border-radius: 9px;
+  margin: 15px 0;
+  color: #e2eafa;
+  overflow-wrap: anywhere;
+}
+
+/* TIMER */
+
+#timer {
+  text-align: center;
+  font-size: 42px;
+  color: #55e6c1;
+  font-weight: 800;
+  letter-spacing: 3px;
+  margin: 20px 0;
+}
+
+/* CONTACTS */
+
+.contact {
+  padding: 13px;
+  background: #26334f;
+  border: 1px solid #394969;
+  border-radius: 9px;
+  margin: 10px 0;
+  color: #e2eafa;
+  overflow-wrap: anywhere;
+}
+
+/* EMERGENCY */
+
+.emergency-title {
+  color: #ff5263;
+}
+
+#emergency {
+  border: 1px solid #ff5263;
+  background: linear-gradient(135deg, #271b32, #151d35);
+}
+
+#emergency .status {
+  border-left-color: #ff5263;
+}
+
+/* NOTICE */
+
+.notice {
+  background: #101a30;
+  border: 1px dashed #52627f;
+}
+
+small {
+  display: block;
+  color: #aab7d0;
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+/* HIDE ELEMENTS */
+
+.hidden {
+  display: none !important;
+}
+
+/* MOBILE RESPONSIVE DESIGN */
+
+@media (max-width: 600px) {
+
+  header {
+    padding: 20px 10px;
+  }
+
+  header h1 {
+    font-size: 24px;
+  }
+
+  .container {
+    width: 92%;
+    margin: 22px auto;
+  }
+
+  .card {
+    padding: 19px;
+    border-radius: 13px;
+  }
+
+  h2 {
+    font-size: 20px;
+  }
+
+  input,
+  select,
+  button {
+    font-size: 14px;
+  }
+
+  #timer {
+    font-size: 36px;
+  }
+}
