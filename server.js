@@ -17,7 +17,8 @@ app.get(["/style.css", "/script.js"], (req, res) => {
 app.get("/api/health", (req, res) => {
   res.json({
     ok: true,
-    service: "Safe Walk Buddy"
+    service: "Safe Walk Buddy",
+    model: process.env.GEMINI_MODEL || "gemini-3.8-flash"
   });
 });
 
