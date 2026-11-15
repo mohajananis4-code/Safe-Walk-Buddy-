@@ -127,6 +127,16 @@
           <button id="locationBtn" class="secondary-btn full" type="button">Get my location link</button>
           <div id="locationResult" class="ai-result">Location has not been requested.</div>
         </section>
+
+        <section class="panel">
+          <h2>🔐 Duress word</h2>
+          <p class="muted">A secret word you say or type during the AI call. Your screen looks normal, but trusted contacts are alerted silently.</p>
+          <label>Secret word
+            <input id="duressWord" type="password" maxlength="30" autocomplete="off" placeholder="e.g. mango">
+          </label>
+          <button id="saveDuressBtn" class="secondary-btn full" type="button">Save duress word</button>
+          <div id="duressResult" class="ai-result">No duress word set.</div>
+        </section>
       </div>
 
       <section id="alertPanel" class="panel" hidden>
@@ -145,6 +155,13 @@
       <h2 id="callTitle">AI is calling you...</h2>
       <p id="callText">Are you safe?</p>
       <p class="muted">Responding in <span id="callCountdown">30</span>s</p>
+      <label>Your reply (type or speak)
+        <input id="callReply" autocomplete="off" placeholder="Type your reply">
+      </label>
+      <div class="button-row row">
+        <button id="callSendBtn" class="secondary-btn" type="button">Send reply</button>
+        <button id="callVoiceBtn" class="secondary-btn" type="button">🎙 Speak</button>
+      </div>
       <div class="button-row">
         <button id="callSafeBtn" class="primary-btn" type="button">I'm safe</button>
         <button id="callExtendBtn" class="secondary-btn" type="button">Extend 15 min</button>
