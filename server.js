@@ -44,7 +44,7 @@ app.post("/api/ai-checkin", async (req, res) => {
     }
 
     const model =
-      process.env.GEMINI_MODEL || "gemini-2.5-flash";
+      process.env.GEMINI_MODEL || "gemini-3.8-flash";
 
     const prompt = `
 You are a cautious check-in assistant
