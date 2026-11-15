@@ -418,8 +418,22 @@ footer {
   margin-left: 6px;
 }
 
-#alertPanel {
-  margin-top: 18px;
+#alertPanel.alert-popup {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: calc(100% - 32px);
+  max-width: 440px;
+  max-height: 85vh;
+  overflow-y: auto;
+  margin: 0;
+  z-index: 1100;
+  box-shadow: 0 0 0 100vmax rgba(23, 35, 59, 0.6), 0 20px 50px rgba(0, 0, 0, 0.3);
+}
+
+#alertCloseBtn {
+  margin-top: 14px;
 }
 
 .call-box label {
