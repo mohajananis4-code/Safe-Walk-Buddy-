@@ -2,6 +2,7 @@ const $ = (id) => document.getElementById(id);
 
 const PROFILE_KEY = "swb_profile_v1";
 const CONTACTS_KEY = "swb_contacts_v1";
+const DURESS_KEY = "swb_duress_v1";
 
 let timerInterval = null;
 let journeyEnd = null;
@@ -37,6 +38,7 @@ function showApp() {
   if (profile) {
     $("welcomeName").textContent = profile.name;
     renderContacts();
+    renderDuress();
   }
 }
 
@@ -152,6 +154,8 @@ $("journeyForm").addEventListener("submit", (e) => {
   const duration = Number($("duration").value);
 
   if (!destination) return;
+
+  unlockAudio();
 
   currentJourney = {
     start: $("startPoint").value.trim() || "Not specified",
@@ -402,6 +406,94 @@ $("emergencyBtn").addEventListener("click", () => {
   }
 });
 
+// SOUND (no audio files needed)
+let audioCtx = null;
+let ringTimer = null;
+
+// call this inside a user tap so browsers allow sound later
+function unlockAudio() {
+  try {
+    if (!audioCtx) {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (audioCtx.state === "suspended") audioCtx.resume();
+    if (window.speechSynthesis) {
+      speechSynthesis.speak(new SpeechSynthesisUtterance(""));
+    }
+  } catch {}
+}
+
+function tone(freq, start, dur, vol = 0.25, type = "sine") {
+  if (!audioCtx) return;
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.type = type;
+  osc.frequency.value = freq;
+  gain.gain.setValueAtTime(0.0001, start);
+  gain.gain.exponentialRampToValueAtTime(vol, start + 0.03);
+  gain.gain.exponentialRampToValueAtTime(0.0001, start + dur);
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+  osc.start(start);
+  osc.stop(start + dur + 0.05);
+}
+
+function ringOnce() {
+  if (!audioCtx) return;
+  const t = audioCtx.currentTime;
+  tone(880, t, 0.35);
+  tone(660, t + 0.4, 0.35);
+  tone(880, t + 0.9, 0.35);
+  tone(660, t + 1.3, 0.35);
+  try { navigator.vibrate && navigator.vibrate([400, 200, 400]); } catch {}
+}
+
+function startRinging(onDone) {
+  stopRinging();
+  try {
+    if (audioCtx && audioCtx.state === "suspended") audioCtx.resume();
+  } catch {}
+  let rings = 0;
+  ringOnce();
+  rings++;
+  ringTimer = setInterval(() => {
+    if (rings >= 3) {
+      stopRinging();
+      if (onDone) onDone();
+      return;
+    }
+    ringOnce();
+    rings++;
+  }, 2500);
+}
+
+function stopRinging() {
+  clearInterval(ringTimer);
+  ringTimer = null;
+  try { navigator.vibrate && navigator.vibrate(0); } catch {}
+}
+
+function playAlertTone() {
+  if (!audioCtx) return;
+  const t = audioCtx.currentTime;
+  for (let i = 0; i < 3; i++) {
+    tone(1000, t + i * 0.4, 0.2, 0.3, "square");
+  }
+}
+
+function speakCall() {
+  try {
+    if (!window.speechSynthesis) return;
+    speechSynthesis.cancel();
+    const en = new SpeechSynthesisUtterance("Are you safe? Please respond.");
+    en.lang = "en-IN";
+    const ta = new SpeechSynthesisUtterance("நீங்கள் பாதுகாப்பாக இருக்கிறீர்களா?");
+    ta.lang = "ta-IN";
+    speechSynthesis.speak(en);
+    speechSynthesis.speak(ta);
+  } catch {}
+}
+
 // AI CALL + AUTO ALERT (DEMO)
 let callInterval = null;
 
@@ -423,6 +515,7 @@ function closeCall() {
   clearInterval(callInterval);
   callInterval = null;
   $("aiCallScreen").hidden = true;
+  stopRinging();
   try { speechSynthesis.cancel(); } catch {}
 }
 
@@ -434,7 +527,9 @@ function startAiCall() {
 
   $("aiCallScreen").hidden = false;
   $("callTitle").textContent = "AI is calling you...";
-  speak("Are you safe? Please respond.");
+  $("callText").textContent = "Are you safe?";
+  $("callReply").value = "";
+  startRinging(speakCall);
 
   let left = 30;
   $("callCountdown").textContent = left;
@@ -447,8 +542,9 @@ function startAiCall() {
   }, 1000);
 }
 
-function sendAlert(reason) {
+function sendAlert(reason, silent = false) {
   closeCall();
+  if (!silent) playAlertTone();
   $("alertPanel").hidden = false;
   setFlow(`Timer ended → AI called → ${reason} → Contacts alerted`);
 
@@ -459,7 +555,9 @@ function sendAlert(reason) {
   card.innerHTML = "";
 
   const title = document.createElement("strong");
-  title.textContent = "Alert sent to trusted contacts";
+  title.textContent = silent
+    ? "Silent alert sent to trusted contacts"
+    : "Alert sent to trusted contacts";
   const tag = document.createElement("span");
   tag.className = "demo-tag";
   tag.textContent = "DEMO";
@@ -476,6 +574,21 @@ function sendAlert(reason) {
   loc.textContent = "Getting last location...";
 
   card.append(title, lines, loc);
+
+  if (silent) {
+    const note = document.createElement("p");
+    note.textContent =
+      "Silent alert: the user's screen shows a normal confirmation. This card is what trusted contacts and the helpline dashboard would see.";
+    card.append(note);
+
+    // make the user's screen look normal
+    clearInterval(timerInterval);
+    timerInterval = null;
+    journeyEnd = null;
+    currentJourney = null;
+    $("timerWrap").hidden = true;
+    renderJourneyStatus("Journey completed", "Thanks for checking in. Take care!");
+  }
 
   if (!navigator.geolocation) {
     loc.textContent = "Location not supported.";
@@ -517,6 +630,72 @@ $("callExtendBtn").addEventListener("click", () => {
 
 $("callHelpBtn").addEventListener("click", () => sendAlert("User pressed Need help"));
 
+// DURESS WORD
+function getDuress() {
+  return localStorage.getItem(DURESS_KEY) || "";
+}
+
+function renderDuress() {
+  $("duressResult").textContent = getDuress()
+    ? "Duress word is set (hidden for safety)."
+    : "No duress word set.";
+}
+
+$("saveDuressBtn").addEventListener("click", () => {
+  const word = $("duressWord").value.trim();
+  if (word.length < 3) {
+    $("duressResult").textContent = "Use a word with at least 3 characters.";
+    return;
+  }
+  localStorage.setItem(DURESS_KEY, word);
+  $("duressWord").value = "";
+  renderDuress();
+});
+
+function handleCallReply(text) {
+  const reply = (text || "").trim().toLowerCase();
+  const word = getDuress().toLowerCase();
+
+  if (!reply) return;
+
+  if (word && reply.includes(word)) {
+    sendAlert("Duress word used", true);
+  } else {
+    $("callText").textContent = "Reply not recognised. Please use the buttons below.";
+  }
+}
+
+$("callSendBtn").addEventListener("click", () => {
+  handleCallReply($("callReply").value);
+});
+
+$("callReply").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") handleCallReply($("callReply").value);
+});
+
+$("callVoiceBtn").addEventListener("click", () => {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) {
+    $("callText").textContent = "Voice not supported. Please type your reply.";
+    return;
+  }
+  const rec = new SR();
+  rec.lang = "en-IN";
+  rec.interimResults = false;
+  $("callVoiceBtn").textContent = "Listening...";
+  rec.onresult = (event) => {
+    const spoken = event.results[0][0].transcript;
+    $("callReply").value = spoken;
+    handleCallReply(spoken);
+  };
+  rec.onerror = () => {
+    $("callText").textContent = "Could not hear you. Please type your reply.";
+  };
+  rec.onend = () => {
+    $("callVoiceBtn").textContent = "🎙 Speak";
+  };
+  rec.start();
+});
+
 // INITIALIZE
 showApp();
-    
