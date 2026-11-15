@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Safe Walk Buddy</title>
+
+<style>
+* {
+  box-sizing: border-box;
+  font-family: Arial, sans-serif;
+}
+
+body {
+  margin: 0;
+  background: #0b1020;
+  color: white;
+}
+
+header {
+  background: #151d35;
+  padding: 20px;
+  text-align: center;
+  border-bottom: 1px solid #293653;
+}
+
+header h1 {
+  color: #55e6c1;
+  margin: 0;
+}
+
+.container {
+  max-width: 600px;
+  margin: 25px auto;
+  padding: 20px;
+}
+
+.card {
+  background: #151d35;
+  padding: 22px;
+  border-radius: 14px;
+  margin-bottom: 18px;
+  border: 1px solid #293653;
+}
+
+h2 {
+  color: #55e6c1;
+}
+
+input, select {
+  width: 100%;
+  padding: 13px;
+  margin: 8px 0 15px;
+  border: 1px solid #394969;
+  border-radius: 8px;
+  background: #0b1020;
+  color: white;
+}
+
+button {
+  width: 100%;
+  padding: 14px;
+  border: none;
+  border-radius: 8px;
+  background: #55e6c1;
+  color: #07131a;
+  font-weight: bold;
+  cursor: pointer;
+  margin-top: 8px;
+}
+
+.danger {
+  background: #ff5263;
+  color: white;
+}
+
+.secondary {
+  background: #34415f;
+  color: white;
+}
+
+.hidden {
+  display: none;
+}
+
+.status {
+  padding: 12px;
+  background: #26334f;
+  border-radius: 8px;
+  margin: 12px 0;
+}
+
+small {
+  color: #aab7d0;
+}
+
+.contact {
+  padding: 10px;
+  background: #26334f;
+  border-radius: 8px;
+  margin: 8px 0;
+}
+</style>
+</head>
+
+<body>
+
+<header>
+  <h1>🛡️ Safe Walk Buddy</h1>
+  <p>Your journey. Your safety.</p>
+</header>
+
+<div class="container">
+
+  <!-- Registration -->
+  <section id="register" class="card">
+    <h2>Create Account</h2>
+
+    <input id="name" placeholder="Your Name">
+    <input id="email" type="email" placeholder="Email Address">
+    <input id="phone" type="tel" placeholder="Phone Number">
+    <input id="pin" type="password" maxlength="6"
+      placeholder="Create 6-digit PIN">
+
+    <button onclick="registerUser()">Create Account</button>
+    <small>Demo only: real OTP verification is not connected.</small>
+  </section>
+
+  <!-- Login -->
+  <section id="login" class="card hidden">
+    <h2>Welcome Back!</h2>
+    <input id="loginPin" type="password"
+      maxlength="6" placeholder="Enter your PIN">
+    <button onclick="loginUser()">Login</button>
+  </section>
+
+  <!-- Dashboard -->
+  <section id="dashboard" class="hidden">
+
+    <div class="card">
+      <h2 id="welcome">Welcome!</h2>
+      <p>Ready to start your journey?</p>
+
+      <input id="destination" placeholder="Enter destination">
+
+      <label>Expected arrival</label>
+      <select id="duration">
+        <option value="1">1 minute (Demo)</option>
+        <option value="3">3 minutes</option>
+        <option value="10">10 minutes</option>
+      </select>
+
+      <button onclick="startJourney()">Start a Journey</button>
+    </div>
+
+    <div class="card">
+      <h2>Trusted Contacts</h2>
+
+      <input id="contactName" placeholder="Contact Name">
+      <input id="contactPhone" placeholder="Contact Phone Number">
+
+      <button onclick="addContact()">Add Contact</button>
+
+      <div id="contacts"></div>
+    </div>
+
+    <div id="journey" class="card hidden">
+      <h2>Journey Status</h2>
+
+      <div class="status" id="journeyStatus">
+        Journey Active
+      </div>
+
+      <p>Destination: <span id="journeyDestination"></span></p>
+      <h2 id="timer">00:00</h2>
+
+      <button class="danger" onclick="simulateEmergency()">
+        Simulate Emergency
+      </button>
+
+      <button class="secondary" onclick="endJourney()">
+        End Journey Safely
+      </button>
+    </div>
+
+    <div id="emergency" class="card hidden">
+      <h2 style="color:#ff5263">⚠ Emergency Active</h2>
+      <p id="emergencyMessage">
+        Safety check required.
+      </p>
+
+      <div class="status" id="callStatus">
+        Preparing demo call sequence...
+      </div>
+
+      <button onclick="confirmSafe()">
+        I'm Safe Now — End Journey
+      </button>
+    </div>
+
+    <button class="secondary" onclick="lockApp()">Lock App</button>
+
+  </section>
+
+  <div class="card">
+    <small>
+      Demo notice: This prototype does not send real OTPs,
+      calls, messages or GPS location. Do not enter real
+      personal information. Real emergency features need
+      secure backend services and user permission.
+    </small>
+  </div>
+
+</div>
+
+<script>
+let profile = JSON.parse(localStorage.getItem("swbProfile"));
+let contacts = JSON.parse(localStorage.getItem("swbContacts")) || [];
+let countdown;
+let remaining = 0;
+
+function show(id) {
+  document.querySelectorAll("#register, #login, #dashboard")
+    .forEach(section => section.classList.add("hidden"));
+
+  document.getElementById(id).classList.remove("hidden");
+}
+
+function registerUser() {
+  const name = document.getElementById("name").value.trim();
+  const email = document.getElementById("email").value.trim();
+  const phone = document.getElementById("phone").value.trim();
+  const pin = document.getElementById("pin").value.trim();
+
+  if (!name || !email || !phone || !/^\d{6}$/.test(pin)) {
+    alert("Enter all details and a valid 6-digit PIN.");
+    return;
+  }
+
+  profile = { name, email, phone, pin, created: Date.now() };
+
+  localStorage.setItem("swbProfile", JSON.stringify(profile));
+
+  openDashboard();
+}
+
+function loginUser() {
+  const enteredPin = document.getElementById("loginPin").value;
+
+  if (profile && enteredPin === profile.pin) {
+    openDashboard();
+  } else {
+    alert("Incorrect PIN");
+  }
+}
+
+function openDashboard() {
+  show("dashboard");
+  document.getElementById("welcome").textContent =
+    "Welcome, " + profile.name + "!";
+
+  renderContacts();
+}
+
+function addContact() {
+  const name = document.getElementById("contactName").value.trim();
+  const phone = document.getElementById("contactPhone").value.trim();
+
+  if (!name || !phone) {
+    alert("Enter contact name and phone number.");
+    return;
+  }
+
+  contacts.push({ name, phone });
+
+  localStorage.setItem("swbContacts", JSON.stringify(contacts));
+
+  document.getElementById("contactName").value = "";
+  document.getElementById("contactPhone").value = "";
+
+  renderContacts();
+}
+
+function renderContacts() {
+  const list = document.getElementById("contacts");
+  list.innerHTML = "";
+
+  contacts.forEach(contact => {
+    const item = document.createElement("div");
+    item.className = "contact";
+    item.textContent = contact.name + " — " + contact.phone;
+    list.appendChild(item);
+  });
+}
+
+function startJourney() {
+  const destination =
+    document.getElementById("destination").value.trim();
+
+  const minutes = Number(document.getElementById("duration").value);
+
+  if (!destination) {
+    alert("Please enter your destination.");
+    return;
+  }
+
+  if (contacts.length === 0) {
+    alert("Please add at least one trusted contact.");
+    return;
+  }
+
+  document.getElementById("journey").classList.remove("hidden");
+  document.getElementById("emergency").classList.add("hidden");
+
+  document.getElementById("journeyDestination").textContent = destination;
+  document.getElementById("journeyStatus").textContent = "Journey Active";
+
+  remaining = minutes * 60;
+  updateTimer();
+
+  clearInterval(countdown);
+  countdown = setInterval(() => {
+    remaining--;
+    updateTimer();
+
+    if (remaining <= 0) {
+      clearInterval(countdown);
+      showSafetyCheck();
+    }
+  }, 1000);
+}
+
+function updateTimer() {
+  const mins = Math.floor(remaining / 60);
+  const secs = remaining % 60;
+
+  document.getElementById("timer").textContent =
+    String(mins).padStart(2, "0") + ":" +
+    String(secs).padStart(2, "0");
+}
+
+function showSafetyCheck() {
+  document.getElementById("journeyStatus").textContent =
+    "Arrival time reached — Safety check required";
+
+  const safe = confirm("AI Safety Check (Demo): Are you safe?");
+
+  if (safe) {
+    endJourney();
+  } else {
+    simulateEmergency();
+  }
+}
+
+function simulateEmergency() {
+  clearInterval(countdown);
+
+  document.getElementById("emergency").classList.remove("hidden");
+  document.getElementById("journeyStatus").textContent =
+    "Emergency Active";
+
+  document.getElementById("emergencyMessage").textContent =
+    "No safety confirmation received. Demo escalation started.";
+
+  let index = 0;
+
+  function nextCall() {
+    if (index < contacts.length) {
+      const contact = contacts[index];
+
+      document.getElementById("callStatus").textContent =
+        "Demo: Simulating voice call to " + contact.name +
+        " (" + contact.phone + ")";
+
+      index++;
+      setTimeout(nextCall, 2000);
+    } else {
+      document.getElementById("callStatus").textContent =
+        "Demo call sequence completed. Journey remains Emergency Active.";
+    }
+  }
+
+  nextCall();
+}
+
+function confirmSafe() {
+  alert("Safety confirmed in demo.");
+  endJourney();
+}
+
+function endJourney() {
+  clearInterval(countdown);
+
+  document.getElementById("journey").classList.add("hidden");
+  document.getElementById("emergency").classList.add("hidden");
+
+  alert("Journey ended safely.");
+}
+
+function lockApp() {
+  show("login");
+}
+
+if (profile) {
+  const twoDays = 2 * 24 * 60 * 60 * 1000;
+
+  if (Date.now() - profile.created < twoDays) {
+    openDashboard();
+  } else {
+    show("login");
+  }
+} else {
+  show("register");
+}
+</script>
+
+</body>
+</html>
