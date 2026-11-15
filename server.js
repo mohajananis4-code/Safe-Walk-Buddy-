@@ -60,6 +60,34 @@ app.get("/api/models", async (req, res) => {
   }
 });
 
+// Simple keyword check, used only when Gemini is unavailable
+function localCheck(text) {
+  const t = text.toLowerCase();
+
+  const urgent = [
+    "help", "danger", "attack", "following", "not safe", "unsafe",
+    "scared", "afraid", "kidnap", "பயம்", "உதவி", "ஆபத்து", "பாதுகாப்பு இல்ல"
+  ];
+  const support = ["lost", "dark", "alone", "worried", "nervous", "uneasy", "late"];
+
+  if (urgent.some((w) => t.includes(w))) {
+    return {
+      category: "URGENT",
+      reply: "This sounds serious. Please call 112 or a trusted person right now."
+    };
+  }
+  if (support.some((w) => t.includes(w))) {
+    return {
+      category: "NEEDS_SUPPORT",
+      reply: "Stay in a well-lit, public place and tell a trusted contact where you are."
+    };
+  }
+  return {
+    category: "OK",
+    reply: "Glad you are okay. Keep your trusted contacts informed until you arrive."
+  };
+}
+
 // GEMINI AI CHECK-IN
 app.post("/api/ai-checkin", async (req, res) => {
   try {
@@ -121,13 +149,21 @@ User check-in: ${JSON.stringify(text)}
       const url =
         `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`;
 
-      const response = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body
-      });
+      let response;
+      let data;
 
-      const data = await response.json();
+      // retry once or twice if Google says "high demand" (503) or rate limit (429)
+      for (let attempt = 0; attempt < 3; attempt++) {
+        response = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body
+        });
+        data = await response.json();
+
+        if (response.ok || ![429, 500, 503].includes(response.status)) break;
+        await new Promise((r) => setTimeout(r, 1200));
+      }
 
       if (response.ok) {
         payload = data;
@@ -139,7 +175,12 @@ User check-in: ${JSON.stringify(text)}
     }
 
     if (!payload) {
-      return res.status(502).json({ error: lastError });
+      console.error("All Gemini models failed. Using basic check. Last error:", lastError);
+      const basic = localCheck(text);
+      return res.json({
+        category: basic.category,
+        reply: `${basic.reply} (Basic check, AI is busy right now.)`
+      });
     }
 
     const raw =
@@ -183,3 +224,4 @@ User check-in: ${JSON.stringify(text)}
 app.listen(PORT, () => {
   console.log(`Safe Walk Buddy running at http://localhost:${PORT}`);
 });
+      
