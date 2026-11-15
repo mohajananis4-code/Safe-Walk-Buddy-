@@ -154,7 +154,19 @@ User check-in: ${JSON.stringify(text)}
     });
   }
 });
-
+app.get("/api/models", async (req, res) => {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return res.status(503).json({ error: "No API key set." });
+  const r = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(apiKey)}`
+  );
+  const d = await r.json();
+  res.json(
+    (d.models || [])
+      .filter((m) => (m.supportedGenerationMethods || []).includes("generateContent"))
+      .map((m) => m.name)
+  );
+});
 app.listen(PORT, () => {
   console.log(
     `Safe Walk Buddy running at http://localhost:${PORT}`
