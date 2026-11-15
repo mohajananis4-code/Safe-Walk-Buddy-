@@ -156,6 +156,7 @@ $("journeyForm").addEventListener("submit", (e) => {
   if (!destination) return;
 
   unlockAudio();
+  requestMic();
 
   currentJourney = {
     start: $("startPoint").value.trim() || "Not specified",
@@ -404,7 +405,109 @@ $("emergencyBtn").addEventListener("click", () => {
 
     output.append(details);
   }
+
+  const voice = document.createElement("button");
+  voice.className = "secondary-btn full";
+  voice.type = "button";
+  voice.style.marginTop = "12px";
+  voice.textContent = "🎙 Choose by voice";
+  voice.addEventListener("click", () => listenEmergencyChoice(output, contacts));
+  output.append(voice);
+
+  const status = document.createElement("p");
+  status.className = "voice-status";
+  output.append(status);
+
+  const confirmBox = document.createElement("div");
+  confirmBox.className = "voice-confirm";
+  output.append(confirmBox);
 });
+
+// EMERGENCY: CHOOSE BY VOICE
+function chooseEmergency(spoken, contacts) {
+  const t = spoken.toLowerCase();
+
+  // a saved contact's name was spoken
+  const named = contacts.find((c) => t.includes(c.name.toLowerCase()));
+  if (named) return { label: `Call ${named.name}`, phone: named.phone };
+
+  const emergencyWords = [
+    "112", "one one two", "one twelve", "emergency", "police",
+    "ambulance", "helpline", "help line", "போலீஸ்", "அவசர"
+  ];
+  if (emergencyWords.some((w) => t.includes(w))) {
+    return { label: "Call India emergency number 112", phone: "112" };
+  }
+
+  const contactWords = [
+    "contact", "friend", "family", "trusted", "mom", "dad", "amma", "appa", "நண்பர்"
+  ];
+  if (contacts.length && contactWords.some((w) => t.includes(w))) {
+    return { label: `Call ${contacts[0].name}`, phone: contacts[0].phone };
+  }
+
+  return null;
+}
+
+function listenEmergencyChoice(output, contacts) {
+  const status = output.querySelector(".voice-status");
+  const confirmBox = output.querySelector(".voice-confirm");
+  confirmBox.innerHTML = "";
+
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) {
+    status.textContent = "Voice is not supported here. Please tap one of the call buttons above.";
+    return;
+  }
+
+  const startListening = () => {
+    const rec = new SR();
+    rec.lang = "en-IN";
+    rec.interimResults = false;
+    status.textContent = "Listening... say '112' or a contact name.";
+
+    rec.onresult = (event) => {
+      const spoken = event.results[0][0].transcript;
+      const choice = chooseEmergency(spoken, contacts);
+
+      if (!choice) {
+        status.textContent = `I heard "${spoken}", but could not match it. Say "112" or a contact name, or tap a button above.`;
+        return;
+      }
+
+      status.textContent = `I heard "${spoken}". Tap below to confirm the call.`;
+      const link = document.createElement("a");
+      link.className = "call-confirm";
+      link.href = `tel:${choice.phone.replace(/[^\d+]/g, "")}`;
+      link.textContent = choice.label;
+      confirmBox.append(link);
+    };
+
+    rec.onerror = () => {
+      status.textContent = "Could not hear you. Tap 'Choose by voice' to try again, or use the buttons above.";
+    };
+
+    rec.start();
+  };
+
+  if (!window.speechSynthesis) {
+    startListening();
+    return;
+  }
+
+  try {
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(
+      "Do you want to call emergency 112, or a trusted contact?"
+    );
+    u.lang = "en-IN";
+    u.onend = startListening;
+    u.onerror = startListening;
+    speechSynthesis.speak(u);
+  } catch {
+    startListening();
+  }
+}
 
 // SOUND (no audio files needed)
 let audioCtx = null;
@@ -481,17 +584,96 @@ function playAlertTone() {
   }
 }
 
-function speakCall() {
+// ask for mic permission once, inside a user tap, so auto-listen can work later
+async function requestMic() {
   try {
-    if (!window.speechSynthesis) return;
+    if (!$("autoListen").checked) return;
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return;
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    stream.getTracks().forEach((t) => t.stop());
+  } catch {}
+}
+
+// AUTO-LISTEN DURING AI CALL
+let callRec = null;
+
+function stopCallListening() {
+  if (callRec) {
+    const rec = callRec;
+    callRec = null;
+    try { rec.onend = null; rec.abort(); } catch {}
+  }
+}
+
+function startCallListening() {
+  if (!$("autoListen").checked) return;
+  if ($("aiCallScreen").hidden) return;
+
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) return;
+
+  stopCallListening();
+
+  const rec = new SR();
+  callRec = rec;
+  rec.lang = "en-IN";
+  rec.interimResults = false;
+
+  $("callText").textContent = "🎙 Listening... say 'I am safe' or 'I am not safe'";
+
+  rec.onresult = (event) => {
+    const spoken = event.results[0][0].transcript;
+    $("callReply").value = spoken;
+    handleCallReply(spoken);
+  };
+
+  rec.onerror = (event) => {
+    if (event.error === "not-allowed" || event.error === "service-not-allowed") {
+      callRec = null;
+      $("callText").textContent =
+        "Microphone is blocked. Please allow it, or use the buttons below.";
+    }
+  };
+
+  rec.onend = () => {
+    // keep listening until the call screen closes
+    if (callRec === rec && !$("aiCallScreen").hidden) {
+      setTimeout(() => {
+        if (callRec === rec && !$("aiCallScreen").hidden) startCallListening();
+      }, 400);
+    }
+  };
+
+  try { rec.start(); } catch {}
+}
+
+function speakCall() {
+  let started = false;
+  const go = () => {
+    if (started) return;
+    started = true;
+    startCallListening();
+  };
+
+  try {
+    if (!window.speechSynthesis) {
+      go();
+      return;
+    }
     speechSynthesis.cancel();
     const en = new SpeechSynthesisUtterance("Are you safe? Please respond.");
     en.lang = "en-IN";
+    en.onerror = go;
     const ta = new SpeechSynthesisUtterance("நீங்கள் பாதுகாப்பாக இருக்கிறீர்களா?");
     ta.lang = "ta-IN";
+    ta.onend = go;
+    ta.onerror = go;
     speechSynthesis.speak(en);
     speechSynthesis.speak(ta);
-  } catch {}
+    setTimeout(go, 9000); // fallback if the voice never finishes
+  } catch {
+    go();
+  }
 }
 
 // AI CALL + AUTO ALERT (DEMO)
@@ -515,6 +697,7 @@ function closeCall() {
   clearInterval(callInterval);
   callInterval = null;
   $("aiCallScreen").hidden = true;
+  stopCallListening();
   stopRinging();
   try { speechSynthesis.cancel(); } catch {}
 }
@@ -600,131 +783,4 @@ function sendAlert(reason, silent = false) {
       a.href = `https://maps.google.com/?q=${pos.coords.latitude},${pos.coords.longitude}`;
       a.target = "_blank";
       a.rel = "noopener noreferrer";
-      a.textContent = "Last known location";
-      loc.textContent = "";
-      loc.append(a);
-    },
-    () => { loc.textContent = "Location unavailable (permission not given)."; },
-    { enableHighAccuracy: true, timeout: 8000 }
-  );
-}
-
-$("callSafeBtn").addEventListener("click", () => {
-  closeCall();
-  $("endJourneyBtn").click();
-  $("alertPanel").hidden = false;
-  setFlow("Timer ended → AI called → User confirmed safe");
-  $("alertCard").className = "ai-result alert-card safe";
-  $("alertCard").textContent = "User confirmed they are safe. No alert sent.";
-});
-
-$("callExtendBtn").addEventListener("click", () => {
-  closeCall();
-  journeyEnd = Date.now() + 15 * 60000;
-  clearInterval(timerInterval);
-  timerInterval = setInterval(updateTimer, 1000);
-  updateTimer();
-  renderJourneyStatus("Journey in progress", "Extended by 15 minutes.");
-  setFlow("AI called → User extended time");
-});
-
-$("callHelpBtn").addEventListener("click", () => sendAlert("User pressed Need help"));
-
-// DURESS WORD
-function getDuress() {
-  return localStorage.getItem(DURESS_KEY) || "";
-}
-
-function renderDuress() {
-  $("duressResult").textContent = getDuress()
-    ? "Duress word is set (hidden for safety)."
-    : "No duress word set.";
-}
-
-$("saveDuressBtn").addEventListener("click", () => {
-  const word = $("duressWord").value.trim();
-  if (word.length < 3) {
-    $("duressResult").textContent = "Use a word with at least 3 characters.";
-    return;
-  }
-  localStorage.setItem(DURESS_KEY, word);
-  $("duressWord").value = "";
-  renderDuress();
-});
-
-function handleCallReply(text) {
-  const reply = (text || "").trim().toLowerCase();
-  const word = getDuress().toLowerCase();
-
-  if (!reply) return;
-
-  // 1. duress word -> silent alert
-  if (word && reply.includes(word)) {
-    sendAlert("Duress word used", true);
-    return;
-  }
-
-  // 2. user says they are NOT safe / need help -> alert (checked before "safe")
-  const danger = [
-    "not safe", "unsafe", "un safe", "not ok", "not okay", "help",
-    "danger", "scared", "afraid", "following me", "attack",
-    "பாதுகாப்பு இல்ல", "பாதுகாப்பாக இல்ல", "பாதுகாப்பா இல்ல",
-    "உதவி", "பயம்", "ஆபத்து"
-  ];
-  if (danger.some((w) => reply.includes(w))) {
-    sendAlert("User said they are not safe");
-    return;
-  }
-
-  // 3. user says they are safe -> same as tapping "I'm safe"
-  const safe = [
-    "safe", "fine", "okay", "all good", "reached", "arrived",
-    "பாதுகாப்பாக", "பாதுகாப்பா", "நலம்"
-  ];
-  if (safe.some((w) => reply.includes(w))) {
-    $("callSafeBtn").click();
-    return;
-  }
-
-  $("callText").textContent =
-    "Reply not recognised. Say or type 'I am safe' / 'I am not safe', or use the buttons.";
-}
-
-$("callSendBtn").addEventListener("click", () => {
-  handleCallReply($("callReply").value);
-});
-
-$("callReply").addEventListener("keydown", (e) => {
-  if (e.key === "Enter") handleCallReply($("callReply").value);
-});
-
-$("callVoiceBtn").addEventListener("click", () => {
-  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SR) {
-    $("callText").textContent = "Voice not supported. Please type your reply.";
-    return;
-  }
-  const rec = new SR();
-  rec.lang = "en-IN";
-  rec.interimResults = false;
-  $("callVoiceBtn").textContent = "Listening...";
-  rec.onresult = (event) => {
-    const spoken = event.results[0][0].transcript;
-    $("callReply").value = spoken;
-    handleCallReply(spoken);
-  };
-  rec.onerror = () => {
-    $("callText").textContent = "Could not hear you. Please type your reply.";
-  };
-  rec.onend = () => {
-    $("callVoiceBtn").textContent = "🎙 Speak";
-  };
-  rec.start();
-});
-
-$("alertCloseBtn").addEventListener("click", () => {
-  $("alertPanel").hidden = true;
-});
-
-// INITIALIZE
-showApp();
+      a.textCont
