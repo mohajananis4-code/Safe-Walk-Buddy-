@@ -520,7 +520,7 @@ function closeCall() {
 }
 
 function startAiCall() {
-  $("alertPanel").hidden = false;
+  $("alertPanel").hidden = true;
   $("alertCard").className = "ai-result";
   $("alertCard").textContent = "";
   setFlow("Timer ended → AI calling...");
@@ -720,6 +720,10 @@ $("callVoiceBtn").addEventListener("click", () => {
     $("callVoiceBtn").textContent = "🎙 Speak";
   };
   rec.start();
+});
+
+$("alertCloseBtn").addEventListener("click", () => {
+  $("alertPanel").hidden = true;
 });
 
 // INITIALIZE
