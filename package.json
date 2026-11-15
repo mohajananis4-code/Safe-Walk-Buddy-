@@ -1,0 +1,16 @@
+{
+  "name": "safe-walk-buddy",
+  "version": "1.0.0",
+  "private": true,
+  "description": "A student safety journey-check-in prototype",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "express": "^4.21.2"
+  }
+}
