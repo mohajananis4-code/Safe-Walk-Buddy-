@@ -4,138 +4,134 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Safe Walk Buddy</title>
-  <meta name="description" content="Safe Walk Buddy - A journey safety companion.">
   <link rel="stylesheet" href="style.css">
 </head>
-
 <body>
+  <header class="topbar">
+    <a class="brand" href="#">✦ Safe Walk Buddy</a>
+    <span class="status-pill">● Safety dashboard</span>
+  </header>
 
-<header>
-  <h1>🛡️ Safe Walk Buddy</h1>
-  <p>Your Journey. Your Safety.</p>
-</header>
+  <main class="container">
+    <section class="hero">
+      <div>
+        <p class="eyebrow">YOUR PERSONAL JOURNEY COMPANION</p>
+        <h1>Walk with more<br><span>peace of mind.</span></h1>
+        <p class="hero-copy">Set a destination, keep trusted people informed, and check in along the way.</p>
+      </div>
+      <div class="hero-icon">🛡️</div>
+    </section>
 
-<main class="container">
+    <section id="loginPanel" class="panel auth-panel">
+      <h2>Create your local profile</h2>
+      <p class="muted">Your profile is stored on this device.</p>
+      <form id="profileForm" class="form-grid">
+        <label>Your name
+          <input id="userName" required maxlength="50" placeholder="Enter your name">
+        </label>
+        <label>Create a 4–6 digit PIN
+          <input id="userPin" required inputmode="numeric" pattern="[0-9]{4,6}" maxlength="6" placeholder="••••">
+        </label>
+        <button class="primary-btn full" type="submit">Save profile →</button>
+      </form>
+    </section>
 
-  <!-- Registration -->
-  <section id="register" class="card">
-    <h2>Create Account</h2>
-
-    <input id="name" placeholder="Your Name" autocomplete="name">
-    <input id="email" type="email" placeholder="Email Address">
-    <input id="phone" type="tel" placeholder="Phone Number">
-    <input id="pin" type="password" maxlength="6"
-      inputmode="numeric" placeholder="Create 6-digit PIN">
-
-    <button onclick="registerUser()">Create Account</button>
-
-    <small>Demo only: Real OTP verification is not connected.</small>
-  </section>
-
-  <!-- Login -->
-  <section id="login" class="card hidden">
-    <h2>Welcome Back!</h2>
-
-    <input id="loginPin" type="password"
-      maxlength="6" inputmode="numeric"
-      placeholder="Enter your PIN">
-
-    <button onclick="loginUser()">Login</button>
-  </section>
-
-  <!-- Dashboard -->
-  <section id="dashboard" class="hidden">
-
-    <div class="card">
-      <h2 id="welcome">Welcome!</h2>
-      <p>Ready to start your journey?</p>
-
-      <label for="destination">Destination</label>
-      <input id="destination" placeholder="Enter destination">
-
-      <label for="duration">Expected arrival</label>
-      <select id="duration">
-        <option value="1">1 minute (Demo)</option>
-        <option value="3">3 minutes</option>
-        <option value="10">10 minutes</option>
-      </select>
-
-      <button onclick="startJourney()">Start a Journey</button>
-    </div>
-
-    <!-- Trusted Contacts -->
-    <div class="card">
-      <h2>Trusted Contacts</h2>
-
-      <input id="contactName" placeholder="Contact Name">
-      <input id="contactPhone" type="tel"
-        placeholder="Contact Phone Number">
-
-      <button onclick="addContact()">Add Contact</button>
-
-      <div id="contacts"></div>
-    </div>
-
-    <!-- Journey -->
-    <div id="journey" class="card hidden">
-      <h2>Journey Status</h2>
-
-      <div class="status" id="journeyStatus">
-        Journey Active
+    <section id="appPanel" hidden>
+      <div class="welcome-row">
+        <div>
+          <p class="eyebrow">YOUR DASHBOARD</p>
+          <h2>Hi, <span id="welcomeName">there</span> 👋</h2>
+        </div>
+        <button id="logoutBtn" class="text-btn" type="button">Log out</button>
       </div>
 
-      <p>Destination:
-        <span id="journeyDestination"></span>
-      </p>
+      <div class="dashboard-grid">
+        <section class="panel">
+          <h2>📍 Journey details</h2>
+          <form id="journeyForm" class="form-grid">
+            <label>Starting point
+              <input id="startPoint" placeholder="Current location">
+            </label>
+            <label>Destination
+              <input id="destination" required placeholder="Where are you going?">
+            </label>
+            <label>Expected journey time
+              <select id="duration">
+                <option value="15">15 minutes</option>
+                <option value="30" selected>30 minutes</option>
+                <option value="45">45 minutes</option>
+                <option value="60">1 hour</option>
+                <option value="90">1 hour 30 minutes</option>
+                <option value="120">2 hours</option>
+              </select>
+            </label>
+            <button class="primary-btn full" type="submit">Start journey →</button>
+          </form>
 
-      <h2 id="timer">00:00</h2>
+          <div id="journeyStatus" class="journey-status">
+            <strong>No active journey</strong>
+          </div>
 
-      <button class="danger" onclick="simulateEmergency()">
-        Simulate Emergency
-      </button>
+          <div id="timerWrap" class="timer-wrap" hidden>
+            <p>TIME REMAINING</p>
+            <div id="timer" class="timer">30:00</div>
+            <div class="button-row">
+              <button id="extendBtn" class="secondary-btn" type="button">+15 min</button>
+              <button id="endJourneyBtn" class="primary-btn" type="button">I arrived safely</button>
+            </div>
+          </div>
+        </section>
 
-      <button class="secondary" onclick="endJourney()">
-        End Journey Safely
-      </button>
-    </div>
+        <section class="panel">
+          <h2>☎ Trusted contacts</h2>
+          <p class="muted">Add people you trust.</p>
+          <form id="contactForm" class="form-grid">
+            <label>Contact name
+              <input id="contactName" required placeholder="Name">
+            </label>
+            <label>Phone number
+              <input id="contactPhone" required type="tel" placeholder="+91 98765 43210">
+            </label>
+            <button class="secondary-btn full" type="submit">＋ Add trusted contact</button>
+          </form>
+          <div id="contactsList" class="contacts-list">
+            <p class="empty-state">No trusted contacts added yet.</p>
+          </div>
+        </section>
 
-    <!-- Emergency -->
-    <div id="emergency" class="card hidden">
-      <h2 class="emergency-title">⚠ Emergency Active</h2>
+        <section class="panel">
+          <h2>✧ AI Voice Check-in</h2>
+          <p class="muted">Describe your current situation.</p>
+          <label>Your check-in
+            <textarea id="checkinText" rows="3" maxlength="500" placeholder="I am on my way and everything is okay."></textarea>
+          </label>
+          <div class="button-row">
+            <button id="voiceBtn" class="secondary-btn" type="button">🎙 Use voice</button>
+            <button id="analyzeBtn" class="primary-btn" type="button">Check with AI</button>
+          </div>
+          <div id="aiResult" class="ai-result">Your AI result appears here.</div>
+        </section>
 
-      <p id="emergencyMessage">
-        Safety confirmation required.
-      </p>
+        <section class="panel emergency-panel">
+          <h2>🚨 Emergency support</h2>
+          <p>If you feel unsafe, contact a trusted person or emergency services.</p>
+          <button id="emergencyBtn" class="danger-btn full" type="button">Start emergency call workflow</button>
+          <div id="emergencyResult" class="emergency-result"></div>
+          <p class="tiny-note">In India, call 112 for immediate emergency assistance.</p>
+        </section>
 
-      <div class="status" id="callStatus">
-        Preparing demo call sequence...
+        <section class="panel">
+          <h2>◎ Share current location</h2>
+          <p class="muted">Location permission is requested only when you tap below.</p>
+          <button id="locationBtn" class="secondary-btn full" type="button">Get my location link</button>
+          <div id="locationResult" class="ai-result">Location has not been requested.</div>
+        </section>
       </div>
+    </section>
 
-      <button onclick="confirmSafe()">
-        I'm Safe Now — End Journey
-      </button>
-    </div>
+    <footer>Safe Walk Buddy · Student Prototype</footer>
+  </main>
 
-    <button class="secondary" onclick="lockApp()">
-      Lock App
-    </button>
-
-  </section>
-
-  <!-- Demo Notice -->
-  <div class="card notice">
-    <small>
-      Prototype notice: This demo does not send real OTPs,
-      calls, messages or GPS location. Do not enter real
-      personal information. Real emergency features require
-      secure backend services and user permission.
-    </small>
-  </div>
-
-</main>
-
-<script
-  src="script.js"></
-script>
+  <script src="script.js"></script>
 </body>
 </html>
