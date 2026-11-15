@@ -364,6 +364,7 @@ $("locationBtn").addEventListener("click", () => {
 
 // EMERGENCY CALL WORKFLOW
 $("emergencyBtn").addEventListener("click", () => {
+  clearEmergencyTimer();
   const contacts = getContacts();
   const output = $("emergencyResult");
 
@@ -421,9 +422,19 @@ $("emergencyBtn").addEventListener("click", () => {
   const confirmBox = document.createElement("div");
   confirmBox.className = "voice-confirm";
   output.append(confirmBox);
+
+  // ask by voice right away, so the user does not have to tap again
+  listenEmergencyChoice(output, contacts);
 });
 
 // EMERGENCY: CHOOSE BY VOICE
+let emergencyTimer = null;
+
+function clearEmergencyTimer() {
+  clearInterval(emergencyTimer);
+  emergencyTimer = null;
+}
+
 function chooseEmergency(spoken, contacts) {
   const t = spoken.toLowerCase();
 
@@ -450,6 +461,7 @@ function chooseEmergency(spoken, contacts) {
 }
 
 function listenEmergencyChoice(output, contacts) {
+  clearEmergencyTimer();
   const status = output.querySelector(".voice-status");
   const confirmBox = output.querySelector(".voice-confirm");
   confirmBox.innerHTML = "";
@@ -475,12 +487,44 @@ function listenEmergencyChoice(output, contacts) {
         return;
       }
 
-      status.textContent = `I heard "${spoken}". Tap below to confirm the call.`;
+      clearEmergencyTimer();
+      confirmBox.innerHTML = "";
+      status.textContent = `I heard "${spoken}". Tap to call now, or it opens automatically.`;
+
       const link = document.createElement("a");
       link.className = "call-confirm";
       link.href = `tel:${choice.phone.replace(/[^\d+]/g, "")}`;
       link.textContent = choice.label;
-      confirmBox.append(link);
+      link.addEventListener("click", clearEmergencyTimer);
+
+      const countdown = document.createElement("p");
+      countdown.className = "voice-status";
+
+      const cancel = document.createElement("button");
+      cancel.type = "button";
+      cancel.className = "secondary-btn full";
+      cancel.textContent = "Cancel";
+      cancel.addEventListener("click", () => {
+        clearEmergencyTimer();
+        confirmBox.innerHTML = "";
+        status.textContent = "Cancelled. Tap 'Choose by voice' to try again.";
+      });
+
+      confirmBox.append(link, countdown, cancel);
+
+      // if the user does not tap within 10 seconds, open the dialer automatically
+      let left = 10;
+      countdown.textContent = `Opening dialer in ${left}s...`;
+      emergencyTimer = setInterval(() => {
+        left--;
+        if (left <= 0) {
+          clearEmergencyTimer();
+          countdown.textContent = "Opening dialer...";
+          window.location.href = link.href;
+        } else {
+          countdown.textContent = `Opening dialer in ${left}s...`;
+        }
+      }, 1000);
     };
 
     rec.onerror = () => {
@@ -584,10 +628,15 @@ function playAlertTone() {
   }
 }
 
-// ask for mic permission once, inside a user tap, so auto-listen can work later
+function autoListenOn() {
+  const el = document.getElementById("autoListen");
+  return el ? el.checked : true;
+}
+
+// ask for mic permission once, inside a user tap (Start journey),
+// so the AI call and the emergency voice choice can use the mic later
 async function requestMic() {
   try {
-    if (!$("autoListen").checked) return;
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return;
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     stream.getTracks().forEach((t) => t.stop());
@@ -606,7 +655,7 @@ function stopCallListening() {
 }
 
 function startCallListening() {
-  if (!$("autoListen").checked) return;
+  if (!autoListenOn()) return;
   if ($("aiCallScreen").hidden) return;
 
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -741,7 +790,7 @@ function sendAlert(reason, silent = false) {
   title.textContent = silent
     ? "Silent alert sent to trusted contacts"
     : "Alert sent to trusted contacts";
-  const tag = document.createElement("span");
+  const tag= document.createElement("span");
   tag.className = "demo-tag";
   tag.textContent = "DEMO";
   title.append(tag);
@@ -912,14 +961,16 @@ $("alertCloseBtn").addEventListener("click", () => {
 // remember the auto-listen choice
 try {
   const saved = localStorage.getItem("swb_autolisten_v1");
-  if (saved !== null) $("autoListen").checked = saved === "1";
+  if (saved !== null && $("autoListen")) $("autoListen").checked = saved === "1";
 } catch {}
 
-$("autoListen").addEventListener("change", () => {
-  try {
-    localStorage.setItem("swb_autolisten_v1", $("autoListen").checked ? "1" : "0");
-  } catch {}
-});
+if ($("autoListen")) {
+  $("autoListen").addEventListener("change", () => {
+    try {
+      localStorage.setItem("swb_autolisten_v1", $("autoListen").checked ? "1" : "0");
+    } catch {}
+  });
+}
 
 // INITIALIZE
 showApp();
