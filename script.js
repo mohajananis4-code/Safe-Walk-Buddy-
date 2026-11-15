@@ -783,4 +783,143 @@ function sendAlert(reason, silent = false) {
       a.href = `https://maps.google.com/?q=${pos.coords.latitude},${pos.coords.longitude}`;
       a.target = "_blank";
       a.rel = "noopener noreferrer";
-      a.textCont
+      a.textContent = "Last known location";
+      loc.textContent = "";
+      loc.append(a);
+    },
+    () => { loc.textContent = "Location unavailable (permission not given)."; },
+    { enableHighAccuracy: true, timeout: 8000 }
+  );
+}
+
+$("callSafeBtn").addEventListener("click", () => {
+  closeCall();
+  $("endJourneyBtn").click();
+  $("alertPanel").hidden = false;
+  setFlow("Timer ended → AI called → User confirmed safe");
+  $("alertCard").className = "ai-result alert-card safe";
+  $("alertCard").textContent = "User confirmed they are safe. No alert sent.";
+});
+
+$("callExtendBtn").addEventListener("click", () => {
+  closeCall();
+  journeyEnd = Date.now() + 15 * 60000;
+  clearInterval(timerInterval);
+  timerInterval = setInterval(updateTimer, 1000);
+  updateTimer();
+  renderJourneyStatus("Journey in progress", "Extended by 15 minutes.");
+  setFlow("AI called → User extended time");
+});
+
+$("callHelpBtn").addEventListener("click", () => sendAlert("User pressed Need help"));
+
+// DURESS WORD
+function getDuress() {
+  return localStorage.getItem(DURESS_KEY) || "";
+}
+
+function renderDuress() {
+  $("duressResult").textContent = getDuress()
+    ? "Duress word is set (hidden for safety)."
+    : "No duress word set.";
+}
+
+$("saveDuressBtn").addEventListener("click", () => {
+  const word = $("duressWord").value.trim();
+  if (word.length < 3) {
+    $("duressResult").textContent = "Use a word with at least 3 characters.";
+    return;
+  }
+  localStorage.setItem(DURESS_KEY, word);
+  $("duressWord").value = "";
+  renderDuress();
+});
+
+function handleCallReply(text) {
+  const reply = (text || "").trim().toLowerCase();
+  const word = getDuress().toLowerCase();
+
+  if (!reply) return;
+
+  // 1. duress word -> silent alert
+  if (word && reply.includes(word)) {
+    sendAlert("Duress word used", true);
+    return;
+  }
+
+  // 2. user says they are NOT safe / need help -> alert (checked before "safe")
+  const danger = [
+    "not safe", "unsafe", "un safe", "not ok", "not okay", "help",
+    "danger", "scared", "afraid", "following me", "attack",
+    "பாதுகாப்பு இல்ல", "பாதுகாப்பாக இல்ல", "பாதுகாப்பா இல்ல",
+    "உதவி", "பயம்", "ஆபத்து"
+  ];
+  if (danger.some((w) => reply.includes(w))) {
+    sendAlert("User said they are not safe");
+    return;
+  }
+
+  // 3. user says they are safe -> same as tapping "I'm safe"
+  const safe = [
+    "safe", "fine", "okay", "all good", "reached", "arrived",
+    "பாதுகாப்பாக", "பாதுகாப்பா", "நலம்"
+  ];
+  if (safe.some((w) => reply.includes(w))) {
+    $("callSafeBtn").click();
+    return;
+  }
+
+  $("callText").textContent =
+    "Reply not recognised. Say or type 'I am safe' / 'I am not safe', or use the buttons.";
+}
+
+$("callSendBtn").addEventListener("click", () => {
+  handleCallReply($("callReply").value);
+});
+
+$("callReply").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") handleCallReply($("callReply").value);
+});
+
+$("callVoiceBtn").addEventListener("click", () => {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) {
+    $("callText").textContent = "Voice not supported. Please type your reply.";
+    return;
+  }
+  const rec = new SR();
+  rec.lang = "en-IN";
+  rec.interimResults = false;
+  $("callVoiceBtn").textContent = "Listening...";
+  rec.onresult = (event) => {
+    const spoken = event.results[0][0].transcript;
+    $("callReply").value = spoken;
+    handleCallReply(spoken);
+  };
+  rec.onerror = () => {
+    $("callText").textContent = "Could not hear you. Please type your reply.";
+  };
+  rec.onend = () => {
+    $("callVoiceBtn").textContent = "🎙 Speak";
+  };
+  rec.start();
+});
+
+$("alertCloseBtn").addEventListener("click", () => {
+  $("alertPanel").hidden = true;
+});
+
+// remember the auto-listen choice
+try {
+  const saved = localStorage.getItem("swb_autolisten_v1");
+  if (saved !== null) $("autoListen").checked = saved === "1";
+} catch {}
+
+$("autoListen").addEventListener("change", () => {
+  try {
+    localStorage.setItem("swb_autolisten_v1", $("autoListen").checked ? "1" : "0");
+  } catch {}
+});
+
+// INITIALIZE
+showApp();
