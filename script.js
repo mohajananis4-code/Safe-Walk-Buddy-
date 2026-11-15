@@ -658,11 +658,36 @@ function handleCallReply(text) {
 
   if (!reply) return;
 
+  // 1. duress word -> silent alert
   if (word && reply.includes(word)) {
     sendAlert("Duress word used", true);
-  } else {
-    $("callText").textContent = "Reply not recognised. Please use the buttons below.";
+    return;
   }
+
+  // 2. user says they are NOT safe / need help -> alert (checked before "safe")
+  const danger = [
+    "not safe", "unsafe", "un safe", "not ok", "not okay", "help",
+    "danger", "scared", "afraid", "following me", "attack",
+    "பாதுகாப்பு இல்ல", "பாதுகாப்பாக இல்ல", "பாதுகாப்பா இல்ல",
+    "உதவி", "பயம்", "ஆபத்து"
+  ];
+  if (danger.some((w) => reply.includes(w))) {
+    sendAlert("User said they are not safe");
+    return;
+  }
+
+  // 3. user says they are safe -> same as tapping "I'm safe"
+  const safe = [
+    "safe", "fine", "okay", "all good", "reached", "arrived",
+    "பாதுகாப்பாக", "பாதுகாப்பா", "நலம்"
+  ];
+  if (safe.some((w) => reply.includes(w))) {
+    $("callSafeBtn").click();
+    return;
+  }
+
+  $("callText").textContent =
+    "Reply not recognised. Say or type 'I am safe' / 'I am not safe', or use the buttons.";
 }
 
 $("callSendBtn").addEventListener("click", () => {
