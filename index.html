@@ -1,136 +1,45 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Safe Walk Buddy</title>
-
-<style>
-* {
-  box-sizing: border-box;
-  font-family: Arial, sans-serif;
-}
-
-body {
-  margin: 0;
-  background: #0b1020;
-  color: white;
-}
-
-header {
-  background: #151d35;
-  padding: 20px;
-  text-align: center;
-  border-bottom: 1px solid #293653;
-}
-
-header h1 {
-  color: #55e6c1;
-  margin: 0;
-}
-
-.container {
-  max-width: 600px;
-  margin: 25px auto;
-  padding: 20px;
-}
-
-.card {
-  background: #151d35;
-  padding: 22px;
-  border-radius: 14px;
-  margin-bottom: 18px;
-  border: 1px solid #293653;
-}
-
-h2 {
-  color: #55e6c1;
-}
-
-input, select {
-  width: 100%;
-  padding: 13px;
-  margin: 8px 0 15px;
-  border: 1px solid #394969;
-  border-radius: 8px;
-  background: #0b1020;
-  color: white;
-}
-
-button {
-  width: 100%;
-  padding: 14px;
-  border: none;
-  border-radius: 8px;
-  background: #55e6c1;
-  color: #07131a;
-  font-weight: bold;
-  cursor: pointer;
-  margin-top: 8px;
-}
-
-.danger {
-  background: #ff5263;
-  color: white;
-}
-
-.secondary {
-  background: #34415f;
-  color: white;
-}
-
-.hidden {
-  display: none;
-}
-
-.status {
-  padding: 12px;
-  background: #26334f;
-  border-radius: 8px;
-  margin: 12px 0;
-}
-
-small {
-  color: #aab7d0;
-}
-
-.contact {
-  padding: 10px;
-  background: #26334f;
-  border-radius: 8px;
-  margin: 8px 0;
-}
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Safe Walk Buddy</title>
+  <meta name="description" content="Safe Walk Buddy - A journey safety companion.">
+  <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
 
 <header>
   <h1>🛡️ Safe Walk Buddy</h1>
-  <p>Your journey. Your safety.</p>
+  <p>Your Journey. Your Safety.</p>
 </header>
 
-<div class="container">
+<main class="container">
 
   <!-- Registration -->
   <section id="register" class="card">
     <h2>Create Account</h2>
 
-    <input id="name" placeholder="Your Name">
+    <input id="name" placeholder="Your Name" autocomplete="name">
     <input id="email" type="email" placeholder="Email Address">
     <input id="phone" type="tel" placeholder="Phone Number">
     <input id="pin" type="password" maxlength="6"
-      placeholder="Create 6-digit PIN">
+      inputmode="numeric" placeholder="Create 6-digit PIN">
 
     <button onclick="registerUser()">Create Account</button>
-    <small>Demo only: real OTP verification is not connected.</small>
+
+    <small>Demo only: Real OTP verification is not connected.</small>
   </section>
 
   <!-- Login -->
   <section id="login" class="card hidden">
     <h2>Welcome Back!</h2>
+
     <input id="loginPin" type="password"
-      maxlength="6" placeholder="Enter your PIN">
+      maxlength="6" inputmode="numeric"
+      placeholder="Enter your PIN">
+
     <button onclick="loginUser()">Login</button>
   </section>
 
@@ -141,9 +50,10 @@ small {
       <h2 id="welcome">Welcome!</h2>
       <p>Ready to start your journey?</p>
 
+      <label for="destination">Destination</label>
       <input id="destination" placeholder="Enter destination">
 
-      <label>Expected arrival</label>
+      <label for="duration">Expected arrival</label>
       <select id="duration">
         <option value="1">1 minute (Demo)</option>
         <option value="3">3 minutes</option>
@@ -153,17 +63,20 @@ small {
       <button onclick="startJourney()">Start a Journey</button>
     </div>
 
+    <!-- Trusted Contacts -->
     <div class="card">
       <h2>Trusted Contacts</h2>
 
       <input id="contactName" placeholder="Contact Name">
-      <input id="contactPhone" placeholder="Contact Phone Number">
+      <input id="contactPhone" type="tel"
+        placeholder="Contact Phone Number">
 
       <button onclick="addContact()">Add Contact</button>
 
       <div id="contacts"></div>
     </div>
 
+    <!-- Journey -->
     <div id="journey" class="card hidden">
       <h2>Journey Status</h2>
 
@@ -171,7 +84,10 @@ small {
         Journey Active
       </div>
 
-      <p>Destination: <span id="journeyDestination"></span></p>
+      <p>Destination:
+        <span id="journeyDestination"></span>
+      </p>
+
       <h2 id="timer">00:00</h2>
 
       <button class="danger" onclick="simulateEmergency()">
@@ -183,10 +99,12 @@ small {
       </button>
     </div>
 
+    <!-- Emergency -->
     <div id="emergency" class="card hidden">
-      <h2 style="color:#ff5263">⚠ Emergency Active</h2>
+      <h2 class="emergency-title">⚠ Emergency Active</h2>
+
       <p id="emergencyMessage">
-        Safety check required.
+        Safety confirmation required.
       </p>
 
       <div class="status" id="callStatus">
@@ -198,32 +116,49 @@ small {
       </button>
     </div>
 
-    <button class="secondary" onclick="lockApp()">Lock App</button>
+    <button class="secondary" onclick="lockApp()">
+      Lock App
+    </button>
 
   </section>
 
-  <div class="card">
+  <!-- Demo Notice -->
+  <div class="card notice">
     <small>
-      Demo notice: This prototype does not send real OTPs,
+      Prototype notice: This demo does not send real OTPs,
       calls, messages or GPS location. Do not enter real
-      personal information. Real emergency features need
+      personal information. Real emergency features require
       secure backend services and user permission.
     </small>
   </div>
 
-</div>
+</main>
 
 <script>
-let profile = JSON.parse(localStorage.getItem("swbProfile"));
-let contacts = JSON.parse(localStorage.getItem("swbContacts")) || [];
-let countdown;
+"use strict";
+
+let profile = null;
+let contacts = [];
+let countdown = null;
+let callSequence = null;
 let remaining = 0;
+let journeyActive = false;
 
-function show(id) {
-  document.querySelectorAll("#register, #login, #dashboard")
-    .forEach(section => section.classList.add("hidden"));
+try {
+  profile = JSON.parse(localStorage.getItem("swbProfile"));
+  contacts = JSON.parse(localStorage.getItem("swbContacts")) || [];
+  if (!Array.isArray(contacts)) contacts = [];
+} catch (error) {
+  profile = null;
+  contacts = [];
+}
 
-  document.getElementById(id).classList.remove("hidden");
+function show(sectionId) {
+  ["register", "login", "dashboard"].forEach(id => {
+    document.getElementById(id).classList.add("hidden");
+  });
+
+  document.getElementById(sectionId).classList.remove("hidden");
 }
 
 function registerUser() {
@@ -237,7 +172,13 @@ function registerUser() {
     return;
   }
 
-  profile = { name, email, phone, pin, created: Date.now() };
+  profile = {
+    name: name,
+    email: email,
+    phone: phone,
+    pin: pin,
+    created: Date.now()
+  };
 
   localStorage.setItem("swbProfile", JSON.stringify(profile));
 
@@ -245,17 +186,19 @@ function registerUser() {
 }
 
 function loginUser() {
-  const enteredPin = document.getElementById("loginPin").value;
+  const enteredPin =
+    document.getElementById("loginPin").value.trim();
 
   if (profile && enteredPin === profile.pin) {
     openDashboard();
   } else {
-    alert("Incorrect PIN");
+    alert("Incorrect PIN. Please try again.");
   }
 }
 
 function openDashboard() {
   show("dashboard");
+
   document.getElementById("welcome").textContent =
     "Welcome, " + profile.name + "!";
 
@@ -263,8 +206,11 @@ function openDashboard() {
 }
 
 function addContact() {
-  const name = document.getElementById("contactName").value.trim();
-  const phone = document.getElementById("contactPhone").value.trim();
+  const name =
+    document.getElementById("contactName").value.trim();
+
+  const phone =
+    document.getElementById("contactPhone").value.trim();
 
   if (!name || !phone) {
     alert("Enter contact name and phone number.");
@@ -297,7 +243,8 @@ function startJourney() {
   const destination =
     document.getElementById("destination").value.trim();
 
-  const minutes = Number(document.getElementById("duration").value);
+  const minutes =
+    Number(document.getElementById("duration").value);
 
   if (!destination) {
     alert("Please enter your destination.");
@@ -309,16 +256,23 @@ function startJourney() {
     return;
   }
 
+  clearInterval(countdown);
+  clearTimeout(callSequence);
+
+  journeyActive = true;
+
   document.getElementById("journey").classList.remove("hidden");
   document.getElementById("emergency").classList.add("hidden");
 
-  document.getElementById("journeyDestination").textContent = destination;
-  document.getElementById("journeyStatus").textContent = "Journey Active";
+  document.getElementById("journeyDestination").textContent =
+    destination;
+
+  document.getElementById("journeyStatus").textContent =
+    "Journey Active";
 
   remaining = minutes * 60;
   updateTimer();
 
-  clearInterval(countdown);
   countdown = setInterval(() => {
     remaining--;
     updateTimer();
@@ -340,10 +294,14 @@ function updateTimer() {
 }
 
 function showSafetyCheck() {
+  if (!journeyActive) return;
+
   document.getElementById("journeyStatus").textContent =
     "Arrival time reached — Safety check required";
 
-  const safe = confirm("AI Safety Check (Demo): Are you safe?");
+  const safe = confirm(
+    "Demo Safety Check: Are you safe?"
+  );
 
   if (safe) {
     endJourney();
@@ -353,9 +311,13 @@ function showSafetyCheck() {
 }
 
 function simulateEmergency() {
+  if (!journeyActive) return;
+
   clearInterval(countdown);
+  clearTimeout(callSequence);
 
   document.getElementById("emergency").classList.remove("hidden");
+
   document.getElementById("journeyStatus").textContent =
     "Emergency Active";
 
@@ -365,18 +327,21 @@ function simulateEmergency() {
   let index = 0;
 
   function nextCall() {
+    if (!journeyActive) return;
+
     if (index < contacts.length) {
       const contact = contacts[index];
 
       document.getElementById("callStatus").textContent =
-        "Demo: Simulating voice call to " + contact.name +
-        " (" + contact.phone + ")";
+        "DEMO ONLY: Simulating voice call to " +
+        contact.name + " (" + contact.phone + ")";
 
       index++;
-      setTimeout(nextCall, 2000);
+
+      callSequence = setTimeout(nextCall, 2000);
     } else {
       document.getElementById("callStatus").textContent =
-        "Demo call sequence completed. Journey remains Emergency Active.";
+        "Demo call sequence completed. Emergency remains active.";
     }
   }
 
@@ -384,24 +349,39 @@ function simulateEmergency() {
 }
 
 function confirmSafe() {
+  if (!journeyActive) return;
+
   alert("Safety confirmed in demo.");
   endJourney();
 }
 
 function endJourney() {
   clearInterval(countdown);
+  clearTimeout(callSequence);
+
+  journeyActive = false;
 
   document.getElementById("journey").classList.add("hidden");
   document.getElementById("emergency").classList.add("hidden");
 
-  alert("Journey ended safely.");
+  alert("Journey ended in demo.");
 }
 
 function lockApp() {
+  if (journeyActive) {
+    alert("Please end your active journey before locking the demo.");
+    return;
+  }
+
   show("login");
 }
 
-if (profile) {
+function initializeApp() {
+  if (!profile) {
+    show("register");
+    return;
+  }
+
   const twoDays = 2 * 24 * 60 * 60 * 1000;
 
   if (Date.now() - profile.created < twoDays) {
@@ -409,9 +389,9 @@ if (profile) {
   } else {
     show("login");
   }
-} else {
-  show("register");
 }
+
+initializeApp();
 </script>
 
 </body>
