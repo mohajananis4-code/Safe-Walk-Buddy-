@@ -6,7 +6,13 @@ const PORT = process.env.PORT || 3000;
 
 app.use(express.json({ limit: "20kb" }));
 
-app.use(express.static(path.join(__dirname)));
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "index.html"));
+});
+
+app.get(["/style.css", "/script.js"], (req, res) => {
+  res.sendFile(path.join(__dirname, req.path));
+});
 
 app.get("/api/health", (req, res) => {
   res.json({
@@ -57,6 +63,7 @@ category
 reply
 
 Keep reply under 45 words.
+Reply in the same language the user wrote in (Tamil, Tanglish or English).
 
 If the user says they are in immediate danger,
 advise contacting local emergency services
