@@ -57,6 +57,7 @@
             </label>
             <label>Expected journey time
               <select id="duration">
+                <option value="0.5">30 seconds (Demo)</option>
                 <option value="15">15 minutes</option>
                 <option value="30" selected>30 minutes</option>
                 <option value="45">45 minutes</option>
@@ -127,10 +128,30 @@
           <div id="locationResult" class="ai-result">Location has not been requested.</div>
         </section>
       </div>
+
+      <section id="alertPanel" class="panel" hidden>
+        <h2>🚨 Alert status <span class="demo-tag">DEMO</span></h2>
+        <p id="flowStatus" class="muted">Timer ended → AI calling → ...</p>
+        <div id="alertCard" class="ai-result"></div>
+      </section>
     </section>
 
-    <footer>Safe Walk Buddy · Student Prototype</footer>
+    <footer>Safe Walk Buddy · Student Prototype · AI call and alerts are simulated for demo</footer>
   </main>
+
+  <section id="aiCallScreen" class="call-screen" hidden>
+    <div class="call-box">
+      <div class="call-icon">📞</div>
+      <h2 id="callTitle">AI is calling you...</h2>
+      <p id="callText">Are you safe?</p>
+      <p class="muted">Responding in <span id="callCountdown">30</span>s</p>
+      <div class="button-row">
+        <button id="callSafeBtn" class="primary-btn" type="button">I'm safe</button>
+        <button id="callExtendBtn" class="secondary-btn" type="button">Extend 15 min</button>
+      </div>
+      <button id="callHelpBtn" class="danger-btn full" type="button">Need help</button>
+    </div>
+  </section>
 
   <script src="script.js"></script>
 </body>
