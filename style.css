@@ -432,6 +432,38 @@ footer {
   box-shadow: 0 0 0 100vmax rgba(23, 35, 59, 0.6), 0 20px 50px rgba(0, 0, 0, 0.3);
 }
 
+.check-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.voice-status {
+  margin: 10px 0 0;
+  font-size: 13px;
+}
+
+.call-confirm {
+  display: block;
+  text-align: center;
+  margin-top: 12px;
+  padding: 14px;
+  background: var(--red);
+  color: white;
+  border-radius: 10px;
+  font-weight: 800;
+  text-decoration: none;
+}
+
 #alertCloseBtn {
   margin-top: 14px;
 }
