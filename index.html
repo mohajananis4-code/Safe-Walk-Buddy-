@@ -107,7 +107,7 @@
             </label>
             <label class="check-row">
               <input type="checkbox" id="autoListen" checked>
-              🎙 Auto-listen for my reply during the AI call
+              🎙 Auto-listen for my reply during the AI call (mic permission is asked when you start)
             </label>
             <button class="primary-btn full" type="submit">Start journey →</button>
           </form>
@@ -214,6 +214,18 @@
     </div>
   </section>
 
+  <script>
+    // Shows script problems on screen (handy on phones). Safe to delete later.
+    window.addEventListener("error", function (e) {
+      var msg = (e.target && e.target.tagName === "SCRIPT")
+        ? "Could not load " + (e.target.getAttribute("src") || "script")
+        : "JS error: " + e.message + " (" + String(e.filename || "").split("/").pop() + ":" + e.lineno + ")";
+      var d = document.createElement("div");
+      d.setAttribute("style", "position:fixed;left:0;right:0;bottom:0;background:#c93648;color:#fff;padding:10px 14px;font-size:12px;z-index:9999");
+      d.textContent = msg;
+      document.body.appendChild(d);
+    }, true);
+  </script>
   <script src="script.js"></script>
 </body>
 </html>
