@@ -1,303 +1,404 @@
-"use strict";
+const $ = (id) => document.getElementById(id);
 
-/* =================================
-   SAFE WALK BUDDY - JAVASCRIPT
-================================= */
+const PROFILE_KEY = "swb_profile_v1";
+const CONTACTS_KEY = "swb_contacts_v1";
 
-// Application data
-let profile = null;
-let contacts = [];
-let countdown = null;
-let callSequence = null;
-let remaining = 0;
-let journeyActive = false;
+let timerInterval = null;
+let journeyEnd = null;
+let currentJourney = null;
 
-
-// Load saved demo data
-try {
-  profile = JSON.parse(localStorage.getItem("swbProfile"));
-  contacts = JSON.parse(localStorage.getItem("swbContacts")) || [];
-
-  if (!Array.isArray(contacts)) {
-    contacts = [];
-  }
-} catch (error) {
-  profile = null;
-  contacts = [];
-}
-
-
-// Show selected section
-function show(sectionId) {
-  ["register", "login", "dashboard"].forEach(id => {
-    document.getElementById(id).classList.add("hidden");
-  });
-
-  document.getElementById(sectionId).classList.remove("hidden");
-}
-
-
-// Registration
-function registerUser() {
-  const name = document.getElementById("name").value.trim();
-  const email = document.getElementById("email").value.trim();
-  const phone = document.getElementById("phone").value.trim();
-  const pin = document.getElementById("pin").value.trim();
-
-  if (!name || !email || !phone || !/^\d{6}$/.test(pin)) {
-    alert("Enter all details and a valid 6-digit PIN.");
-    return;
-  }
-
-  profile = {
-    name: name,
-    email: email,
-    phone: phone,
-    pin: pin,
-    created: Date.now()
-  };
-
-  localStorage.setItem("swbProfile", JSON.stringify(profile));
-
-  openDashboard();
-}
-
-
-// Login
-function loginUser() {
-  const enteredPin =
-    document.getElementById("loginPin").value.trim();
-
-  if (profile && enteredPin === profile.pin) {
-    openDashboard();
-  } else {
-    alert("Incorrect PIN. Please try again.");
+function getProfile() {
+  try {
+    return JSON.parse(localStorage.getItem(PROFILE_KEY));
+  } catch {
+    return null;
   }
 }
 
+function getContacts() {
+  try {
+    return JSON.parse(localStorage.getItem(CONTACTS_KEY)) || [];
+  } catch {
+    return [];
+  }
+}
 
-// Open Dashboard
-function openDashboard() {
-  show("dashboard");
-
-  document.getElementById("welcome").textContent =
-    "Welcome, " + profile.name + "!";
-
+function saveContacts(list) {
+  localStorage.setItem(CONTACTS_KEY, JSON.stringify(list));
   renderContacts();
 }
 
+function showApp() {
+  const profile = getProfile();
 
-// Add Trusted Contact
-function addContact() {
-  const name =
-    document.getElementById("contactName").value.trim();
+  $("loginPanel").hidden = !!profile;
+  $("appPanel").hidden = !profile;
 
-  const phone =
-    document.getElementById("contactPhone").value.trim();
+  if (profile) {
+    $("welcomeName").textContent = profile.name;
+    renderContacts();
+  }
+}
 
-  if (!name || !phone) {
-    alert("Enter contact name and phone number.");
+// PROFILE
+$("profileForm").addEventListener("submit", (e) => {
+  e.preventDefault();
+
+  const name = $("userName").value.trim();
+  const pin = $("userPin").value.trim();
+
+  if (!name || !/^\d{4,6}$/.test(pin)) {
+    alert("Enter a name and a 4–6 digit PIN.");
     return;
   }
 
-  contacts.push({ name, phone });
-
-  localStorage.setItem("swbContacts", JSON.stringify(contacts));
-
-  document.getElementById("contactName").value = "";
-  document.getElementById("contactPhone").value = "";
-
-  renderContacts();
-}
-
-
-// Display Trusted Contacts
-function renderContacts() {
-  const list = document.getElementById("contacts");
-  list.innerHTML = "";
-
-  contacts.forEach(contact => {
-    const item = document.createElement("div");
-
-    item.className = "contact";
-    item.textContent = contact.name + " — " + contact.phone;
-
-    list.appendChild(item);
-  });
-}
-
-
-// Start Journey
-function startJourney() {
-  const destination =
-    document.getElementById("destination").value.trim();
-
-  const minutes =
-    Number(document.getElementById("duration").value);
-
-  if (!destination) {
-    alert("Please enter your destination.");
-    return;
-  }
-
-  if (contacts.length === 0) {
-    alert("Please add at least one trusted contact.");
-    return;
-  }
-
-  clearInterval(countdown);
-  clearTimeout(callSequence);
-
-  journeyActive = true;
-
-  document.getElementById("journey").classList.remove("hidden");
-  document.getElementById("emergency").classList.add("hidden");
-
-  document.getElementById("journeyDestination").textContent =
-    destination;
-
-  document.getElementById("journeyStatus").textContent =
-    "Journey Active";
-
-  remaining = minutes * 60;
-
-  updateTimer();
-
-  countdown = setInterval(() => {
-    remaining--;
-
-    updateTimer();
-
-    if (remaining <= 0) {
-      clearInterval(countdown);
-      showSafetyCheck();
-    }
-  }, 1000);
-}
-
-
-// Update Countdown Timer
-function updateTimer() {
-  const mins = Math.floor(remaining / 60);
-  const secs = remaining % 60;
-
-  document.getElementById("timer").textContent =
-    String(mins).padStart(2, "0") + ":" +
-    String(secs).padStart(2, "0");
-}
-
-
-// Safety Check
-function showSafetyCheck() {
-  if (!journeyActive) return;
-
-  document.getElementById("journeyStatus").textContent =
-    "Arrival time reached — Safety check required";
-
-  const safe = confirm(
-    "Demo Safety Check: Are you safe?"
+  localStorage.setItem(
+    PROFILE_KEY,
+    JSON.stringify({ name, pin })
   );
 
-  if (safe) {
-    endJourney();
-  } else {
-    simulateEmergency();
+  showApp();
+});
+
+$("logoutBtn").addEventListener("click", () => {
+  if (confirm("Log out on this device?")) {
+    localStorage.removeItem(PROFILE_KEY);
+    showApp();
+  }
+});
+
+// TRUSTED CONTACTS
+function renderContacts() {
+  const list = getContacts();
+  const root = $("contactsList");
+
+  root.innerHTML = "";
+
+  if (!list.length) {
+    root.innerHTML =
+      '<p class="empty-state">No trusted contacts added yet.</p>';
+    return;
+  }
+
+  list.forEach((contact, index) => {
+    const div = document.createElement("div");
+    div.className = "contact-item";
+
+    const info = document.createElement("div");
+
+    const strong = document.createElement("strong");
+    strong.textContent = contact.name;
+
+    const small = document.createElement("small");
+    small.textContent = contact.phone;
+
+    info.append(strong, small);
+
+    const remove = document.createElement("button");
+    remove.className = "remove-btn";
+    remove.type = "button";
+    remove.textContent = "Remove";
+
+    remove.addEventListener("click", () => {
+      const updated = getContacts();
+      updated.splice(index, 1);
+      saveContacts(updated);
+    });
+
+    div.append(info, remove);
+    root.append(div);
+  });
+}
+
+$("contactForm").addEventListener("submit", (e) => {
+  e.preventDefault();
+
+  const name = $("contactName").value.trim();
+  const phone = $("contactPhone").value.trim();
+
+  if (!name || !phone) return;
+
+  const list = getContacts();
+
+  if (list.length >= 5) {
+    alert("You can add up to 5 trusted contacts.");
+    return;
+  }
+
+  list.push({ name, phone });
+  saveContacts(list);
+
+  e.target.reset();
+});
+
+// JOURNEY TIMER
+function renderJourneyStatus(message, sub) {
+  $("journeyStatus").innerHTML = "";
+
+  const strong = document.createElement("strong");
+  strong.textContent = message;
+
+  const p = document.createElement("p");
+  p.className = "muted";
+  p.textContent = sub || "";
+
+  $("journeyStatus").append(strong, p);
+}
+
+$("journeyForm").addEventListener("submit", (e) => {
+  e.preventDefault();
+
+  const destination = $("destination").value.trim();
+  const duration = Number($("duration").value);
+
+  if (!destination) return;
+
+  currentJourney = {
+    start: $("startPoint").value.trim() || "Not specified",
+    destination,
+    duration,
+    startedAt: Date.now()
+  };
+
+  journeyEnd = Date.now() + duration * 60000;
+
+  clearInterval(timerInterval);
+
+  $("timerWrap").hidden = false;
+
+  renderJourneyStatus(
+    "Journey in progress",
+    `Destination: ${destination}`
+  );
+
+  updateTimer();
+  timerInterval = setInterval(updateTimer, 1000);
+});
+
+function updateTimer() {
+  if (!journeyEnd) return;
+
+  const ms = Math.max(0, journeyEnd - Date.now());
+
+  const mins = Math.floor(ms / 60000);
+  const secs = Math.floor((ms % 60000) / 1000);
+
+  $("timer").textContent =
+    `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+
+  if (ms <= 0) {
+    clearInterval(timerInterval);
+    timerInterval = null;
+
+    renderJourneyStatus(
+      "Check-in time reached",
+      "Please confirm your arrival or contact someone you trust if you need help."
+    );
   }
 }
 
+$("extendBtn").addEventListener("click", () => {
+  if (journeyEnd) {
+    journeyEnd += 15 * 60000;
+    updateTimer();
+  }
+});
 
-// Emergency Escalation - Demo Only
-function simulateEmergency() {
-  if (!journeyActive) return;
+$("endJourneyBtn").addEventListener("click", () => {
+  clearInterval(timerInterval);
+  timerInterval = null;
 
-  clearInterval(countdown);
-  clearTimeout(callSequence);
+  journeyEnd = null;
+  currentJourney = null;
 
-  document.getElementById("emergency").classList.remove("hidden");
+  $("timerWrap").hidden = true;
 
-  document.getElementById("journeyStatus").textContent =
-    "Emergency Active";
+  renderJourneyStatus(
+    "Journey completed",
+    "You marked that you arrived safely. Take care!"
+  );
+});
 
-  document.getElementById("emergencyMessage").textContent =
-    "No safety confirmation received. Demo escalation started.";
+// VOICE INPUT
+$("voiceBtn").addEventListener("click", () => {
+  const SpeechRecognition =
+    window.SpeechRecognition ||
+    window.webkitSpeechRecognition;
 
-  let index = 0;
+  if (!SpeechRecognition) {
+    $("aiResult").textContent =
+      "Voice input is not supported. Please type your check-in.";
+    return;
+  }
 
-  function nextCall() {
-    if (!journeyActive) return;
+  const recognition = new SpeechRecognition();
 
-    if (index < contacts.length) {
-      const contact = contacts[index];
+  recognition.lang = "en-IN";
+  recognition.interimResults = false;
 
-      document.getElementById("callStatus").textContent =
-        "DEMO ONLY: Simulating voice call to " +
-        contact.name + " (" + contact.phone + ")";
+  $("voiceBtn").textContent = "Listening...";
 
-      index++;
+  recognition.onresult = (event) => {
+    $("checkinText").value =
+      event.results[0][0].transcript;
+  };
 
-      callSequence = setTimeout(nextCall, 2000);
+  recognition.onerror = () => {
+    $("aiResult").textContent =
+      "Voice input failed. Please type your check-in.";
+  };
 
-    } else {
-      document.getElementById("callStatus").textContent =
-        "Demo call sequence completed. Emergency remains active.";
+  recognition.onend = () => {
+    $("voiceBtn").textContent = "🎙 Use voice";
+  };
+
+  recognition.start();
+});
+
+// GEMINI AI CHECK-IN
+$("analyzeBtn").addEventListener("click", async () => {
+  const text = $("checkinText").value.trim();
+
+  if (!text) {
+    $("aiResult").textContent =
+      "Please enter your check-in first.";
+    return;
+  }
+
+  $("analyzeBtn").disabled = true;
+  $("analyzeBtn").textContent = "Checking...";
+
+  try {
+    const response = await fetch("/api/ai-checkin", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ text })
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || "AI check-in failed.");
     }
+
+    $("aiResult").textContent =
+      `AI check-in: ${data.category}. ${data.reply}`;
+
+  } catch (error) {
+    $("aiResult").textContent =
+      `Could not reach Gemini: ${error.message}`;
+  } finally {
+    $("analyzeBtn").disabled = false;
+    $("analyzeBtn").textContent = "Check with AI";
   }
+});
 
-  nextCall();
-}
+// LOCATION
+$("locationBtn").addEventListener("click", () => {
+  const output = $("locationResult");
 
-
-// Confirm User is Safe
-function confirmSafe() {
-  if (!journeyActive) return;
-
-  alert("Safety confirmed in demo.");
-
-  endJourney();
-}
-
-
-// End Journey
-function endJourney() {
-  clearInterval(countdown);
-  clearTimeout(callSequence);
-
-  journeyActive = false;
-
-  document.getElementById("journey").classList.add("hidden");
-  document.getElementById("emergency").classList.add("hidden");
-
-  alert("Journey ended in demo.");
-}
-
-
-// Lock Application
-function lockApp() {
-  if (journeyActive) {
-    alert("Please end your active journey before locking the demo.");
+  if (!navigator.geolocation) {
+    output.textContent =
+      "Location is not supported by this browser.";
     return;
   }
 
-  show("login");
-}
+  output.textContent = "Requesting location permission...";
 
+  navigator.geolocation.getCurrentPosition(
+    (position) => {
+      const latitude = position.coords.latitude;
+      const longitude = position.coords.longitude;
 
-// Initialize Application
-function initializeApp() {
-  if (!profile) {
-    show("register");
-    return;
+      const url =
+        `https://maps.google.com/?q=${latitude},${longitude}`;
+
+      output.innerHTML = "";
+
+      const message = document.createElement("p");
+      message.textContent =
+        "Your location link is ready. Share it only with someone you trust.";
+
+      const link = document.createElement("a");
+      link.href = url;
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      link.className = "call-link";
+      link.textContent = "Open map";
+
+      const copy = document.createElement("button");
+      copy.className = "call-link";
+      copy.type = "button";
+      copy.textContent = "Copy location link";
+
+      copy.addEventListener("click", async () => {
+        try {
+          await navigator.clipboard.writeText(url);
+          copy.textContent = "Copied!";
+        } catch {
+          copy.textContent = "Copy unavailable";
+        }
+      });
+
+      output.append(message, link, copy);
+    },
+    () => {
+      output.textContent =
+        "Unable to get location. Check your browser permission.";
+    },
+    {
+      enableHighAccuracy: true,
+      timeout: 10000
+    }
+  );
+});
+
+// EMERGENCY CALL WORKFLOW
+$("emergencyBtn").addEventListener("click", () => {
+  const contacts = getContacts();
+  const output = $("emergencyResult");
+
+  output.innerHTML = "";
+
+  const intro = document.createElement("p");
+
+  intro.textContent = contacts.length
+    ? "Choose a trusted contact below. Your phone dialer will open and you must confirm the call."
+    : "No trusted contacts saved. In India, call 112 for immediate emergency assistance.";
+
+  output.append(intro);
+
+  contacts.forEach((contact) => {
+    const link = document.createElement("a");
+
+    link.className = "call-link";
+    link.href =
+      `tel:${contact.phone.replace(/[^\d+]/g, "")}`;
+
+    link.textContent = `Call ${contact.name}`;
+
+    output.append(link);
+  });
+
+  const emergency = document.createElement("a");
+
+  emergency.className = "call-link";
+  emergency.href = "tel:112";
+  emergency.textContent = "Call India emergency number 112";
+
+  output.append(emergency);
+
+  if (currentJourney) {
+    const details = document.createElement("p");
+
+    details.textContent =
+      `Active journey: ${currentJourney.start} → ${currentJourney.destination}.`;
+
+    output.append(details);
   }
+});
 
-  const twoDays = 2 * 24 * 60 * 60 * 1000;
-
-  if (Date.now() - profile.created < twoDays) {
-    openDashboard();
-  } else {
-    show("login");
-  }
-}
-
-
-// Start Application
-initializeApp();
+// INITIALIZE
+showApp();
