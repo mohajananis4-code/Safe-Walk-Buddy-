@@ -164,6 +164,9 @@ $("journeyForm").addEventListener("submit", (e) => {
 
   clearInterval(timerInterval);
 
+  // reset any previous demo alert
+  $("alertPanel").hidden = true;
+
   $("timerWrap").hidden = false;
 
   renderJourneyStatus(
@@ -190,16 +193,15 @@ function updateTimer() {
     clearInterval(timerInterval);
     timerInterval = null;
 
-    renderJourneyStatus(
-      "Check-in time reached",
-      "Please confirm your arrival or contact someone you trust if you need help."
-    );
+    renderJourneyStatus("Check-in time reached", "AI is calling you...");
+    startAiCall();
   }
 }
 
 $("extendBtn").addEventListener("click", () => {
   if (journeyEnd) {
     journeyEnd += 15 * 60000;
+    if (!timerInterval) timerInterval = setInterval(updateTimer, 1000);
     updateTimer();
   }
 });
@@ -400,5 +402,121 @@ $("emergencyBtn").addEventListener("click", () => {
   }
 });
 
+// AI CALL + AUTO ALERT (DEMO)
+let callInterval = null;
+
+function setFlow(text) {
+  $("flowStatus").textContent = text;
+}
+
+function speak(text) {
+  try {
+    if (!window.speechSynthesis) return;
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = "en-IN";
+    speechSynthesis.speak(u);
+  } catch {}
+}
+
+function closeCall() {
+  clearInterval(callInterval);
+  callInterval = null;
+  $("aiCallScreen").hidden = true;
+  try { speechSynthesis.cancel(); } catch {}
+}
+
+function startAiCall() {
+  $("alertPanel").hidden = false;
+  $("alertCard").className = "ai-result";
+  $("alertCard").textContent = "";
+  setFlow("Timer ended → AI calling...");
+
+  $("aiCallScreen").hidden = false;
+  $("callTitle").textContent = "AI is calling you...";
+  speak("Are you safe? Please respond.");
+
+  let left = 30;
+  $("callCountdown").textContent = left;
+
+  clearInterval(callInterval);
+  callInterval = setInterval(() => {
+    left--;
+    $("callCountdown").textContent = left;
+    if (left <= 0) sendAlert("No response to AI call");
+  }, 1000);
+}
+
+function sendAlert(reason) {
+  closeCall();
+  $("alertPanel").hidden = false;
+  setFlow(`Timer ended → AI called → ${reason} → Contacts alerted`);
+
+  const profile = getProfile();
+  const contacts = getContacts();
+  const card = $("alertCard");
+  card.className = "ai-result alert-card";
+  card.innerHTML = "";
+
+  const title = document.createElement("strong");
+  title.textContent = "Alert sent to trusted contacts";
+  const tag = document.createElement("span");
+  tag.className = "demo-tag";
+  tag.textContent = "DEMO";
+  title.append(tag);
+
+  const lines = document.createElement("p");
+  lines.textContent =
+    `User: ${profile ? profile.name : "Unknown"} | ` +
+    `Contacts: ${contacts.length ? contacts.map(c => c.name).join(", ") : "none added"} | ` +
+    `Reason: ${reason} | Time: ${new Date().toLocaleTimeString()}` +
+    (currentJourney ? ` | Trip: ${currentJourney.start} → ${currentJourney.destination}` : "");
+
+  const loc = document.createElement("p");
+  loc.textContent = "Getting last location...";
+
+  card.append(title, lines, loc);
+
+  if (!navigator.geolocation) {
+    loc.textContent = "Location not supported.";
+    return;
+  }
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+      const a = document.createElement("a");
+      a.href = `https://maps.google.com/?q=${pos.coords.latitude},${pos.coords.longitude}`;
+      a.target = "_blank";
+      a.rel = "noopener noreferrer";
+      a.textContent = "Last known location";
+      loc.textContent = "";
+      loc.append(a);
+    },
+    () => { loc.textContent = "Location unavailable (permission not given)."; },
+    { enableHighAccuracy: true, timeout: 8000 }
+  );
+}
+
+$("callSafeBtn").addEventListener("click", () => {
+  closeCall();
+  $("endJourneyBtn").click();
+  $("alertPanel").hidden = false;
+  setFlow("Timer ended → AI called → User confirmed safe");
+  $("alertCard").className = "ai-result alert-card safe";
+  $("alertCard").textContent = "User confirmed they are safe. No alert sent.";
+});
+
+$("callExtendBtn").addEventListener("click", () => {
+  closeCall();
+  journeyEnd = Date.now() + 15 * 60000;
+  clearInterval(timerInterval);
+  timerInterval = setInterval(updateTimer, 1000);
+  updateTimer();
+  renderJourneyStatus("Journey in progress", "Extended by 15 minutes.");
+  setFlow("AI called → User extended time");
+});
+
+$("callHelpBtn").addEventListener("click", () => sendAlert("User pressed Need help"));
+
 // INITIALIZE
 showApp();
+    
